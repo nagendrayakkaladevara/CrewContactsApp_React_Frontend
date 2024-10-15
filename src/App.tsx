@@ -4,10 +4,11 @@ import { FixedSizeList as List } from "react-window";
 import "./App.css";
 import { Input } from "./components/ui/input";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { RocketIcon } from "@radix-ui/react-icons";
+import { PhoneIcon } from "lucide-react";
 import Logo from '../public/indian-railways-logo.png';
 import Footer from "./components/ui/footer";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./components/ui/tooltip";
+import { Button } from "./components/ui/button";
 
 interface User {
   id: number;
@@ -15,12 +16,20 @@ interface User {
   Phone: number;
 }
 
+interface VisitorResponse {
+  message: string;
+  count: number;
+}
+
+
 const App: React.FC = () => {
   const [userData, setUserData] = useState<User[]>([]);
   const [searchTerm, setSearchTerm] = useState<string>("");
   const [filteredSuggestions, setFilteredSuggestions] = useState<User[]>([]);
+  const [visitors, setVisitors] = useState<VisitorResponse | null>(null);
 
   const listRef = useRef<any>(null);
+  const isFetched = useRef(false);
 
   useEffect(() => {
     fetch("/data.json")
@@ -40,14 +49,15 @@ const App: React.FC = () => {
   const filteredSuggestionsMemo = useMemo(() => {
     if (!searchTerm) return [];
 
-    const normalizedSearchTerm = searchTerm.toLowerCase().replace(/[^a-z]/g, "");
+    const normalizedSearchTerm = searchTerm.toLowerCase().replace(/[^a-z0-9]/g, "");
 
     return userData.filter((user) => {
-      const normalizedFirstName = user.FirstName?.toLowerCase().replace(/[^a-z]/g, "");
+      const normalizedFirstName = user.FirstName?.toLowerCase().replace(/[^a-z0-9]/g, "");
 
       return normalizedFirstName.includes(normalizedSearchTerm);
     });
   }, [searchTerm, userData]);
+
 
   useEffect(() => {
     setFilteredSuggestions(filteredSuggestionsMemo);
@@ -56,6 +66,28 @@ const App: React.FC = () => {
       listRef.current.scrollTo(0);
     }
   }, [filteredSuggestionsMemo]);
+
+
+  useEffect(() => {
+    if (isFetched.current) return;
+
+    const fetchData = async () => {
+      try {
+        const response = await fetch('https://payment-details-railwayapplication-backend.vercel.app/track-visitor');
+        if (!response.ok) {
+          throw new Error('Network response was not ok');
+        }
+        const data = await response.json();
+        setVisitors(data);
+        isFetched.current = true;
+      } catch (error) {
+        console.log(error);
+      }
+    };
+
+    fetchData();
+
+  }, [])
 
   return (
     <>
@@ -70,13 +102,16 @@ const App: React.FC = () => {
               type="text"
               placeholder="Search user..."
               onChange={handleInputChange}
-              className="p-2 border dark:border-white rounded dark:text-white text-black border-white dark:bg-black bg-white"
+              className="p-2 border dark:border-white rounded dark:text-white text-black border-black dark:bg-black bg-white"
             />
           </div>
           {filteredSuggestions.length > 0 && (
             <SuggestionList suggestions={filteredSuggestions} listRef={listRef} />
           )}
         </div>
+      </div>
+      <div className="flex justify-center p-2 pb-1">
+        <Button>Visitor count : {visitors?.count}</Button>
       </div>
       <Footer />
     </>
@@ -104,7 +139,7 @@ const SuggestionList: React.FC<SuggestionListProps> = ({ suggestions, listRef })
       {({ index, style }: any) => (
         <div key={suggestions[index].id} style={{ ...style }} className="">
           <Alert>
-            <RocketIcon className="h-4 w-4" />
+            <PhoneIcon className="h-4 w-4" />
             <AlertTitle >{suggestions[index]?.FirstName || "No Name"}</AlertTitle>
             <AlertDescription className="flex justify-between">
               {suggestions[index]?.Phone || "No Phone"}
@@ -112,7 +147,7 @@ const SuggestionList: React.FC<SuggestionListProps> = ({ suggestions, listRef })
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <button
-                      className="inline-flex h-8 animate-shimmer items-center justify-center rounded-md border border-slate-800 bg-[linear-gradient(110deg,#000103,45%,#1e2631,55%,#000103)] bg-[length:200%_100%] px-5 font-medium text-slate-400 transition-colors focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-2 focus:ring-offset-slate-50"
+                      className="inline-flex h-8 animate-shimmer items-center justify-center rounded-md border border-slate-800 bg-[linear-gradient(110deg,#000103,45%,#1e2631,55%,#000103)] bg-[length:200%_100%] px-5 font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-2 focus:ring-offset-slate-50 text-white"
                       onClick={() => handleClickCall(suggestions[index]?.Phone)}
                     >
                       Call
