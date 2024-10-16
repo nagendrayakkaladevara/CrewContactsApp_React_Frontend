@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, useRef } from "react";
-import debounce from "lodash.debounce";
+// import debounce from "lodash.debounce";
 import { FixedSizeList as List } from "react-window";
 import "./App.css";
 import { Input } from "./components/ui/input";
@@ -9,6 +9,10 @@ import Logo from '../public/indian-railways-logo.png';
 import Footer from "./components/ui/footer";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./components/ui/tooltip";
 import { Button } from "./components/ui/button";
+
+
+const SpeechRecognition =
+  (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
 
 interface User {
   id: number;
@@ -20,7 +24,6 @@ interface VisitorResponse {
   message: string;
   count: number;
 }
-
 
 const App: React.FC = () => {
   const [userData, setUserData] = useState<User[]>([]);
@@ -38,12 +41,23 @@ const App: React.FC = () => {
       .catch((error) => console.error("Error fetching user data:", error));
   }, []);
 
-  const debouncedSearch = debounce((term: string) => {
-    setSearchTerm(term);
-  }, 300);
-
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    debouncedSearch(e.target.value);
+    setSearchTerm(e.target.value); 
+  };
+
+
+  const handleVoiceSearch = () => {
+    const recognition = new SpeechRecognition();
+    recognition.start();
+
+    recognition.onresult = (event: any) => {
+      const spokenWord = event.results[0][0].transcript;
+      setSearchTerm(spokenWord); 
+    };
+
+    recognition.onerror = (event: any) => {
+      console.error("Speech recognition error:", event.error);
+    };
   };
 
   const filteredSuggestionsMemo = useMemo(() => {
@@ -53,11 +67,9 @@ const App: React.FC = () => {
 
     return userData.filter((user) => {
       const normalizedFirstName = user.FirstName?.toLowerCase().replace(/[^a-z0-9]/g, "");
-
       return normalizedFirstName.includes(normalizedSearchTerm);
     });
   }, [searchTerm, userData]);
-
 
   useEffect(() => {
     setFilteredSuggestions(filteredSuggestionsMemo);
@@ -86,8 +98,7 @@ const App: React.FC = () => {
     };
 
     fetchData();
-
-  }, [])
+  }, []);
 
   return (
     <>
@@ -97,13 +108,15 @@ const App: React.FC = () => {
           <div className="flex justify-center w-full">
             <img src={Logo} className="h-16 w-16 " />
           </div>
-          <div>
+          <div className="flex gap-2">
             <Input
               type="text"
               placeholder="Search user..."
+              value={searchTerm}
               onChange={handleInputChange}
               className="p-2 border dark:border-white rounded dark:text-white text-black border-black dark:bg-black bg-white"
             />
+            <Button onClick={handleVoiceSearch}>🎤 Voice Search</Button>
           </div>
           {filteredSuggestions.length > 0 && (
             <SuggestionList suggestions={filteredSuggestions} listRef={listRef} />
@@ -140,7 +153,7 @@ const SuggestionList: React.FC<SuggestionListProps> = ({ suggestions, listRef })
         <div key={suggestions[index].id} style={{ ...style }} className="">
           <Alert>
             <PhoneIcon className="h-4 w-4" />
-            <AlertTitle >{suggestions[index]?.FirstName || "No Name"}</AlertTitle>
+            <AlertTitle>{suggestions[index]?.FirstName || "No Name"}</AlertTitle>
             <AlertDescription className="flex justify-between">
               {suggestions[index]?.Phone || "No Phone"}
               <TooltipProvider>
@@ -158,7 +171,6 @@ const SuggestionList: React.FC<SuggestionListProps> = ({ suggestions, listRef })
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
-
             </AlertDescription>
           </Alert>
         </div>
