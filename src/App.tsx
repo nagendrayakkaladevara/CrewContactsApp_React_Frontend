@@ -154,7 +154,7 @@ const App: React.FC = () => {
           </div>
           <Tabs defaultValue="Contacts" className="w-full flex justify-center flex-col">
             <div className="m-auto pb-3">
-              <TabsList>
+              <TabsList style={{ border: "1px solid" }}>
                 <TabsTrigger value="Contacts">Crew Contacts</TabsTrigger>
                 <TabsTrigger value="Documents">Important Documents</TabsTrigger>
               </TabsList>
